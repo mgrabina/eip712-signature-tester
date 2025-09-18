@@ -1,0 +1,26 @@
+{
+  "name": "eip712-signer",
+  "version": "1.0.0",
+  "description": "EIP-712 signature generator with deadline support",
+  "main": "eip712-signer.js",
+  "bin": {
+    "eip712-signer": "./eip712-signer.js"
+  },
+  "scripts": {
+    "start": "node eip712-signer.js",
+    "test": "node test-examples.js"
+  },
+  "dependencies": {
+    "ethers": "^6.15.0"
+  },
+  "keywords": [
+    "ethereum",
+    "eip712",
+    "signature",
+    "permit",
+    "web3",
+    "crypto"
+  ],
+  "author": "mgrabina",
+  "license": "MIT"
+}
