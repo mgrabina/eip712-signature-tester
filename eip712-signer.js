@@ -26,6 +26,40 @@ class EIP712Signer {
     }
 
     /**
+     * Check if message fields are in the same order as type definition
+     * @param {Object} types - Message types
+     * @param {Object} message - Message data
+     * @returns {Object} { isOrdered, typeOrder, messageOrder, reorderedMessage }
+     */
+    checkFieldOrder(types, message) {
+        // Get the primary type (usually the first non-EIP712Domain type)
+        const primaryType = Object.keys(types).find(key => key !== 'EIP712Domain');
+        if (!primaryType) {
+            return { isOrdered: true, typeOrder: [], messageOrder: [], reorderedMessage: message };
+        }
+
+        const typeOrder = types[primaryType].map(field => field.name);
+        const messageOrder = Object.keys(message);
+        const isOrdered = JSON.stringify(typeOrder) === JSON.stringify(messageOrder);
+
+        // Create reordered message following type definition order
+        const reorderedMessage = {};
+        typeOrder.forEach(fieldName => {
+            if (message.hasOwnProperty(fieldName)) {
+                reorderedMessage[fieldName] = message[fieldName];
+            }
+        });
+
+        return {
+            isOrdered,
+            typeOrder,
+            messageOrder,
+            reorderedMessage,
+            primaryType
+        };
+    }
+
+    /**
      * Sign EIP-712 typed data
      * @param {Object} domain - EIP-712 domain
      * @param {Object} types - Message types
@@ -35,6 +69,30 @@ class EIP712Signer {
      */
     async signTypedData(domain, types, value, deadline = null) {
         try {
+            // Check field ordering
+            const orderCheck = this.checkFieldOrder(types, value);
+            
+            console.log('\n🔍 Field Order Check:');
+            console.log('Primary Type:', orderCheck.primaryType);
+            console.log('Type Order  :', orderCheck.typeOrder.join(', '));
+            console.log('Message Order:', orderCheck.messageOrder.join(', '));
+            
+            if (!orderCheck.isOrdered) {
+                console.log('⚠️  Field order mismatch detected!');
+                console.log('\nField-by-field comparison:');
+                const maxLength = Math.max(orderCheck.typeOrder.length, orderCheck.messageOrder.length);
+                for (let i = 0; i < maxLength; i++) {
+                    const typeField = orderCheck.typeOrder[i] || 'MISSING';
+                    const msgField = orderCheck.messageOrder[i] || 'MISSING';
+                    const match = typeField === msgField ? '✅' : '❌';
+                    console.log(`  ${i + 1}. ${match} Type: ${typeField} | Message: ${msgField}`);
+                }
+                console.log('\n📝 Using reordered message for signing...');
+                value = orderCheck.reorderedMessage;
+            } else {
+                console.log('✅ Field order matches type definition');
+            }
+            console.log('');
             // Generate deadline if not provided
             if (!deadline) {
                 deadline = this.generateDeadline();
